@@ -4,6 +4,7 @@ import plotly.express as px
 import dash
 from dash import dcc, html
 from dash.dependencies import Input, Output
+import dash_table
 
 # Conexión a la API REST Countries
 url = 'https://restcountries.com/v3.1/all'
@@ -48,9 +49,30 @@ app = dash.Dash(__name__)
 # Layout de la app
 app.layout = html.Div([
     html.H1("Análisis de Datos de Países"),
+    
+    # Tabla con la información relevante
+    dash_table.DataTable(
+        id='table',
+        columns=[{"name": i, "id": i} for i in df.columns],
+        data=df.to_dict('records'),
+        page_size=10,
+        style_table={'overflowX': 'auto'},
+        style_cell={
+            'height': 'auto',
+            'minWidth': '100px', 'width': '150px', 'maxWidth': '200px',
+            'whiteSpace': 'normal'
+        },
+        style_header={
+            'backgroundColor': 'rgb(230, 230, 230)',
+            'fontWeight': 'bold'
+        }
+    ),
+    
     dcc.Graph(id='population-area-scatter'),
     dcc.Graph(id='region-population-bar'),
-    dcc.Graph(id='region-area-bar')
+    dcc.Graph(id='region-area-bar'),
+    dcc.Graph(id='languages-bar'),
+    dcc.Graph(id='currencies-bar')
 ])
 
 # Callback para actualizar el gráfico de dispersión
@@ -81,6 +103,28 @@ def update_population_bar(id):
 def update_area_bar(id):
     region_area = df.groupby('Region')['Area'].sum().reset_index()
     fig = px.bar(region_area, x='Region', y='Area', title='Área Total por Región')
+    return fig
+
+# Callback para actualizar el gráfico de barras de idiomas
+@app.callback(
+    Output('languages-bar', 'figure'),
+    Input('languages-bar', 'id')
+)
+def update_languages_bar(id):
+    language_counts = df['Languages'].str.split(', ').explode().value_counts().reset_index()
+    language_counts.columns = ['Language', 'Count']
+    fig = px.bar(language_counts, x='Language', y='Count', title='Distribución de Idiomas')
+    return fig
+
+# Callback para actualizar el gráfico de barras de monedas
+@app.callback(
+    Output('currencies-bar', 'figure'),
+    Input('currencies-bar', 'id')
+)
+def update_currencies_bar(id):
+    currency_counts = df['Currencies'].str.split(', ').explode().value_counts().reset_index()
+    currency_counts.columns = ['Currency', 'Count']
+    fig = px.bar(currency_counts, x='Currency', y='Count', title='Distribución de Monedas')
     return fig
 
 # Ejecutar la app
